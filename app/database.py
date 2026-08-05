@@ -20,6 +20,7 @@ def get_session():
     with Session(engine) as session:
         yield session
 
+
 def seed_tasks():
     with Session(engine) as session:
         # Check if tasks already exist in the database
@@ -33,5 +34,6 @@ def seed_tasks():
             ]
             session.add_all(initial_tasks)
             session.commit()
+
 
 SessionDep = Annotated[Session, Depends(get_session)]

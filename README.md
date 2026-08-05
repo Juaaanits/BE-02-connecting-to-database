@@ -2,82 +2,64 @@
 
 ## Overview
 
-This project is my Week 3 assignment for the FlyRank Backend AI Engineering track.
+This project is my Week 3 FlyRank Backend AI Engineering assignment.
 
-The objective is to replace the in-memory task storage from the previous assignment with a persistent SQLite database while keeping the API contract unchanged. The application automatically creates the database and required tables on startup, allowing task data to persist across server restarts.
+The goal is to replace an in-memory FastAPI CRUD task API with a persistent SQLite database while keeping the same REST API behavior. Tasks are stored in `tasks.db`, which is created automatically when the application starts.
 
-This assignment demonstrates one of the core principles of backend engineering:
+Core idea:
 
-> **The API defines what the application does, while the database defines where the data is stored.**
-
----
-
-## Assignment Objectives
-
-- Replace the in-memory task list with SQLite.
-- Implement persistent CRUD operations.
-- Automatically create the database and tables.
-- Seed sample tasks only during the first application startup.
-- Maintain the exact same REST API from Assignment 1.
-- Practice basic SQL operations using SQLite.
-
----
+> The API defines what the application does. The database defines where the application stores data.
 
 ## Tech Stack
 
-- Python 3
+- Python 3.10+
 - FastAPI
+- SQLModel
 - SQLite
-- SQLModel _(or sqlite3 depending on implementation)_
 - Uvicorn
-- DB Browser for SQLite _(used for database inspection)_
-
----
+- uv
 
 ## Project Structure
 
 ```text
-BE-02-connecting-to-database/
-│
-├── app/
-│   ├── main.py
-│   ├── database.py
-│   ├── models.py
-│   ├── schemas.py
-│   ├── crud.py
-│   └── routes.py
-│
-├── tasks.db
-├── requirements.txt
-├── README.md
-├── .gitignore
-└── assets/
-    ├── swagger.png
-    ├── database.png
-    └── sql-query.png
+.
+|-- app/
+|   |-- database.py
+|   `-- models.py
+|-- main.py
+|-- pyproject.toml
+|-- uv.lock
+|-- README.md
+`-- .gitignore
 ```
 
----
+`tasks.db` is generated locally and ignored by Git.
 
 ## Database Schema
 
-The application automatically creates a SQLite database named:
+SQLite database file:
 
 ```text
 tasks.db
 ```
 
-The database contains a single table:
+Table:
 
-| Column | Type    | Description            |
-| ------ | ------- | ---------------------- |
-| id     | Integer | Primary Key            |
-| title  | Text    | Task title             |
-| done   | Boolean | Task completion status |
+```text
+tasks
+```
 
-During the first application startup, three sample tasks are automatically inserted if the table is empty.
+| Column | Type    | Description               |
+| ------ | ------- | ------------------------- |
+| id     | Integer | Primary key               |
+| title  | Text    | Task title                |
+| done   | Boolean | Completion status, 0 or 1 |
 
----
+On startup, the application:
+
+- creates `tasks.db` if missing
+- creates the `tasks` table if missing
+- seeds three example tasks only when the table is empty
 
 ## Installation
 
@@ -85,69 +67,40 @@ Clone the repository:
 
 ```bash
 git clone https://github.com/Juaaanits/BE-02-connecting-to-database.git
-```
-
-Move into the project directory:
-
-```bash
 cd BE-02-connecting-to-database
 ```
 
-Create a virtual environment:
+Install dependencies with `uv`:
 
 ```bash
-python -m venv .venv
+uv sync
 ```
 
-Activate the virtual environment.
+## Running The Application
 
-**Windows**
+Start the development server:
 
 ```bash
-.venv\Scripts\activate
+uv run uvicorn main:app --reload
 ```
 
-**macOS/Linux**
+The API runs at:
 
-```bash
-source .venv/bin/activate
-```
-
-Install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
----
-
-## Running the Application
-
-Start the FastAPI development server:
-
-```bash
-fastapi dev
-```
-
-The API will be available at:
-
-```
+```text
 http://127.0.0.1:8000
 ```
 
-The first time the application starts:
+Interactive docs:
 
-- `tasks.db` is created automatically.
-- The `tasks` table is created automatically.
-- Three sample tasks are inserted only if the table is empty.
+```text
+http://127.0.0.1:8000/docs
+```
 
----
+## API Endpoints
 
-# API Endpoints
+### GET `/tasks`
 
-## GET /tasks
-
-Returns all tasks.
+Returns all tasks from SQLite.
 
 Example response:
 
@@ -161,11 +114,9 @@ Example response:
 ]
 ```
 
----
+### GET `/tasks/{task_id}`
 
-## GET /tasks/{id}
-
-Returns a single task.
+Returns one task by ID.
 
 Unknown IDs return:
 
@@ -175,9 +126,7 @@ Unknown IDs return:
 }
 ```
 
----
-
-## POST /tasks
+### POST `/tasks`
 
 Creates a new task.
 
@@ -189,6 +138,8 @@ Example request:
 }
 ```
 
+Successful creates return `201 Created`.
+
 Example response:
 
 ```json
@@ -199,9 +150,7 @@ Example response:
 }
 ```
 
----
-
-## PUT /tasks/{id}
+### PUT `/tasks/{task_id}`
 
 Updates an existing task.
 
@@ -209,166 +158,111 @@ Example request:
 
 ```json
 {
-  "title": "Learn SQL",
+  "title": "Learn SQLModel",
   "done": true
 }
 ```
 
----
+### DELETE `/tasks/{task_id}`
 
-## DELETE /tasks/{id}
+Deletes an existing task.
 
-Deletes a task.
+Successful deletes return:
 
----
-
-## Interactive API Documentation
-
-FastAPI automatically generates interactive API documentation.
-
-Swagger UI
-
+```text
+204 No Content
 ```
-http://127.0.0.1:8000/docs
-```
-
-ReDoc
-
-```
-http://127.0.0.1:8000/redoc
-```
-
----
-
-# Database Viewer
-
-The project was tested using **DB Browser for SQLite**.
-
-Example database view:
-
-```sql
-SELECT * FROM tasks;
-```
-
-<img src="assets/database.png" width="900">
-
----
-
-## Example SQL Queries
-
-Retrieve all tasks
-
-```sql
-SELECT * FROM tasks;
-```
-
-Retrieve completed tasks
-
-```sql
-SELECT * FROM tasks
-WHERE done = 1;
-```
-
-Count all tasks
-
-```sql
-SELECT COUNT(*)
-FROM tasks;
-```
-
-Mark all tasks as completed
-
-```sql
-UPDATE tasks
-SET done = 1;
-```
-
-Delete completed tasks
-
-```sql
-DELETE FROM tasks
-WHERE done = 1;
-```
-
----
 
 ## Example cURL Requests
 
-Retrieve all tasks
+Get all tasks:
 
 ```bash
 curl http://127.0.0.1:8000/tasks
 ```
 
-Create a task
+Create a task:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/tasks \
--H "Content-Type: application/json" \
--d "{\"title\":\"Study SQL\"}"
+  -H "Content-Type: application/json" \
+  -d "{\"title\":\"Study SQL\"}"
 ```
 
-Delete a task
+Update a task:
+
+```bash
+curl -X PUT http://127.0.0.1:8000/tasks/1 \
+  -H "Content-Type: application/json" \
+  -d "{\"title\":\"Learn SQLModel\",\"done\":true}"
+```
+
+Delete a task:
 
 ```bash
 curl -X DELETE http://127.0.0.1:8000/tasks/1
 ```
 
----
+## SQL Practice
+
+I inspected `tasks.db` with a SQLite database viewer and ran SQL queries manually.
+
+![Database viewer showing the tasks table](assets/database_view.png)
+
+List every task:
+
+```sql
+SELECT * FROM tasks;
+```
+
+Show completed tasks:
+
+```sql
+SELECT * FROM tasks WHERE done = 1;
+```
+
+Count all tasks:
+
+```sql
+SELECT COUNT(*) FROM tasks;
+```
+
+During Stage 4, this count query returned:
+
+```text
+4
+```
+
+Mark every task as completed:
+
+```sql
+UPDATE tasks SET done = 1;
+```
+
+Delete completed tasks:
+
+```sql
+DELETE FROM tasks WHERE done = 1;
+```
+
+## Why SQLite
+
+SQLite was chosen because it stores the database in a single local file, requires no separate database server, and is simple to run for a small assignment project. It is a good learning database for understanding tables, rows, primary keys, persistence, and CRUD queries before moving to PostgreSQL or MySQL.
 
 ## Learning Outcomes
 
-Through this assignment I learned how to:
-
-- Connect a FastAPI application to SQLite.
-- Create and initialize a relational database automatically.
-- Perform CRUD operations using SQL.
-- Persist application data across server restarts.
-- Separate the API layer from the data storage layer.
-- Understand how backend applications interact with relational databases.
-
----
-
-## Key Backend Concept
-
-The client never knows how data is stored.
-
-Assignment 1
-
-```text
-Client
-   │
-FastAPI
-   │
-In-memory Array
-```
-
-Assignment 2
-
-```text
-Client
-   │
-FastAPI
-   │
-SQLite Database
-```
-
-The API endpoints remain exactly the same—the storage implementation changes.
-
----
+- Connected FastAPI routes to SQLite using SQLModel.
+- Created a database and table automatically on startup.
+- Seeded starter rows only when the table is empty.
+- Replaced in-memory CRUD storage with persistent database storage.
+- Practiced manual SQL queries using a SQLite viewer.
+- Preserved the REST API while changing the storage layer.
 
 ## Future Improvements
 
-- Search tasks using SQL `LIKE`
-- Filter completed tasks
-- Sort tasks alphabetically
-- Add task statistics endpoint
-- Store timestamps (`created_at`, `updated_at`)
-- Migrate to PostgreSQL
-- Introduce SQLAlchemy and Alembic migrations
-
----
-
-## License
-
-This project was created for educational purposes as part of the FlyRank Backend AI Engineering program.
+- Add `GET /tasks?search=...` using SQL `LIKE`.
+- Add `GET /tasks?done=true` filtering.
+- Add sorting with `ORDER BY`.
+- Add task statistics with SQL `COUNT`.
+- Add timestamps with `created_at` and `updated_at`.
+- Add migrations for future schema changes.
