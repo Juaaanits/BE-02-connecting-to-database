@@ -2,6 +2,7 @@ from fastapi import FastAPI, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional
+from app.database import create_db_and_tables, seed_tasks
 
 app = FastAPI()
 
@@ -21,6 +22,12 @@ tasks = [
     Task(id=1, title="Learn FastAPI", done=False),
     Task(id=2, title="Learn CRUD", done=False),
 ]
+
+@app.on_event("startup")
+def on_startup():
+    create_db_and_tables()
+    seed_tasks()
+
 
 @app.get("/")
 def root():
