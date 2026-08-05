@@ -1,4 +1,4 @@
-r# Virtual Environment
+# Virtual Environment
 .venv/
 venv/
 
@@ -17,3 +17,4 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+tasks.db
