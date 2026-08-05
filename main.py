@@ -9,22 +9,12 @@ from app.models import Task
 
 app = FastAPI()
 
-class TaskResponse(BaseModel):
-    id: int
-    title: str
-    done: bool
-
 class TaskCreate(BaseModel):
     title: Optional[str] = None
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
     done: bool
-
-tasks = [
-    TaskResponse(id=1, title="Learn FastAPI", done=False),
-    TaskResponse(id=2, title="Learn CRUD", done=False),
-]
 
 @app.on_event("startup")
 def on_startup():
