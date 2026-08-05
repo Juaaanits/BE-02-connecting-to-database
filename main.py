@@ -2,11 +2,14 @@ from fastapi import FastAPI, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional
-from app.database import create_db_and_tables, seed_tasks
+from app.database import create_db_and_tables, seed_tasks, SessionDep
+from sqlmodel import select
+from app.models import Task
+
 
 app = FastAPI()
 
-class Task(BaseModel):
+class TaskResponse(BaseModel):
     id: int
     title: str
     done: bool
@@ -19,8 +22,8 @@ class TaskUpdate(BaseModel):
     done: bool
 
 tasks = [
-    Task(id=1, title="Learn FastAPI", done=False),
-    Task(id=2, title="Learn CRUD", done=False),
+    TaskResponse(id=1, title="Learn FastAPI", done=False),
+    TaskResponse(id=2, title="Learn CRUD", done=False),
 ]
 
 @app.on_event("startup")
@@ -37,41 +40,55 @@ def root():
     }
 
 @app.get("/tasks")
-def get_tasks():
+def get_tasks(session: SessionDep):
+    statement = select(Task)
+    tasks = session.exec(statement).all()
     return tasks
 
 @app.get("/tasks/{task_id}")
-def get_task(task_id: int):
-    task = next((task for task in tasks if task.id == task_id), None)
+def get_task(task_id:int, session: SessionDep):
+    task = session.get(Task, task_id)
     if task is None:
         return JSONResponse(status_code=404, content={"error": "Task not found"})
     return task
 
 @app.post("/tasks", status_code=status.HTTP_201_CREATED)
-def create_task(task_data: TaskCreate):
+def create_task(task_data: TaskCreate, session: SessionDep):
     if task_data.title is None or task_data.title.strip() == "":
         return JSONResponse(status_code=400, content={"error": "Title is required"})
-    new_id = max((existing_task.id for existing_task in tasks), default=0) + 1
-    new_task = Task(id=new_id, title=task_data.title, done=False)
 
-    tasks.append(new_task)
+    new_task = Task(title=task_data.title, done=False)
+    session.add(new_task)
+    session.commit()
+    session.refresh(new_task)
+
     return new_task
 
 @app.put("/tasks/{task_id}")
-def update_task(task_id: int, task_data: TaskUpdate):
-    task = next((task for task in tasks if task.id == task_id), None)
+def update_task(task_id: int, task_data: TaskUpdate, session: SessionDep):
+    task = session.get(Task, task_id)
     if task is None:
         return JSONResponse(status_code=404, content={"error": "Task not found"})
+
     if task_data.title is None or task_data.title.strip() == "":
         return JSONResponse(status_code=400, content={"error": "Title is required"})
 
     task.title = task_data.title
     task.done = task_data.done
+
+    session.add(task)
+    session.commit()
+    session.refresh(task)
+
     return task
 
 @app.delete("/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_task(task_id: int):
-    task = next((task for task in tasks if task.id == task_id), None)
+def delete_task(task_id: int, session: SessionDep):
+    task = session.get(Task, task_id)
     if task is None:
         return JSONResponse(status_code=404, content={"error": "Task not found"})
-    tasks.remove(task)
+    session.delete(task)
+    session.commit()
+
+
+
