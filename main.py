@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -6,7 +8,7 @@ from typing import Optional
 from app.database import create_db_and_tables, seed_tasks, SessionDep
 from sqlmodel import select
 from app.models import Task
-
+from sqlalchemy import func
 
 app = FastAPI()
 
@@ -38,8 +40,24 @@ def root():
 
 
 @app.get("/tasks")
-def get_tasks(session: SessionDep):
+def get_tasks(
+    session: SessionDep,
+    search: Optional[str] = None,
+    done: Optional[bool] = None,
+    sort: Optional[str] = None,
+
+):
     statement = select(Task)
+
+    if search:
+        statement = statement.where(Task.title.like(f"%{search}%"))
+
+    if done is not None:
+        statement = statement.where(Task.done == done)
+
+    if sort == "title":
+        statement = statement.order_by(Task.title)
+
     tasks = session.exec(statement).all()
     return tasks
 
@@ -79,6 +97,7 @@ def update_task(task_id: int, task_data: TaskUpdate, session: SessionDep):
     task.title = task_data.title
     task.done = task_data.done
 
+    task.updated_at = datetime.now(timezone.utc)
     session.add(task)
     session.commit()
     session.refresh(task)
@@ -93,3 +112,18 @@ def delete_task(task_id: int, session: SessionDep):
         return JSONResponse(status_code=404, content={"error": "Task not found"})
     session.delete(task)
     session.commit()
+
+
+@app.get("/stats")
+def get_stats(session: SessionDep):
+    total = session.exec(select(func.count(Task.id))).one()
+
+    completed = session.exec(select(func.count(Task.id)).where(Task.done == True)).one()
+
+    pending = session.exec(select(func.count(Task.id)).where(Task.done == False)).one()
+
+    return {
+        "total": total,
+        "completed": completed,
+        "pending": pending
+    }
